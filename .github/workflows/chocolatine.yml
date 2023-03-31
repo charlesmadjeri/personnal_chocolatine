@@ -82,14 +82,6 @@ jobs:
         steps:
             -   name: Check out repository
                 uses: actions/checkout@v2
-
-            -   name: Set up SSH key
-                run: |
-                    mkdir -p ~/.ssh
-                    echo "${{ secrets.GIT_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-                    chmod 600 ~/.ssh/id_rsa
-                    ssh-keyscan "${{ env.MIRROR_URL }}" >> ~/.ssh/known_hosts
-
             -   name: Push to mirror repository
                 uses: pixta-dev/repository-mirroring-action@v1
                 with:
