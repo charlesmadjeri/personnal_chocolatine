@@ -1,0 +1,97 @@
+name: Chocolatine
+
+on:
+
+    push:
+        branches-ignore:
+            -   'ga-ignore-*'
+    pull_request:
+        branches-ignore:
+            -   'ga-ignore-*'
+
+# Set the variables for the epitech repository acting like a mirror
+# and list the executables relative filepaths with filenames you need :
+env:
+
+    MIRROR_URL: 'git@github.com:charlesmadjeri/epitech_chocolatine.git'
+    EXECUTABLES: ''
+
+jobs:
+
+    check_coding_style:
+        runs-on: ubuntu-latest
+        container:
+            image: ghcr.io/epitech/coding-style-checker:latest
+        steps:
+            -   name: Check out repository
+                uses: actions/checkout@v2
+            -   name: Run coding style checker
+                run: |
+                    result=$(check.sh $(pwd) $(pwd))
+                    if [ -n "$result" ]; then
+                        echo "$result" | while read line; do
+                            file_path=$(echo "$line" | cut -d: -f1)
+                            line_number=$(echo "$line" | cut -d: -f2)
+                            column_number=$(echo "$line" | cut -d: -f3)
+                            error_message=$(echo "$line" | cut -d: -f4-)
+                            echo "::error file=$file_path,line=$line_number,col=$column_number::$error_message"
+                        done
+                        exit 1
+                    fi
+
+    check_program_compilation:
+        needs: check_coding_style
+        runs-on: ubuntu-latest
+        container:
+            image: epitechcontent/epitest-docker
+        steps:
+            -   name: Check out repository
+                uses: actions/checkout@v2
+            -   name: Run make with 2-minute timeout
+                run: make
+                timeout-minutes: 2
+            -   name: Run make clean
+                run: make clean
+            -   name: Verify executables
+                run: |
+                    IFS=',' read -ra executable_array <<< "${{ env.EXECUTABLES }}"
+                    for executable in "${executable_array[@]}"; do
+                        if [[ ! -x "$executable" ]]; then
+                            echo "::error::Missing or non-executable file: $executable"
+                            exit 1
+                        fi
+                    done
+
+    run_tests:
+        needs: [check_coding_style, check_program_compilation]
+        runs-on: ubuntu-latest
+        container:
+            image: epitechcontent/epitest-docker
+        steps:
+            -   name: Check out repository
+                uses: actions/checkout@v2
+
+            -   name: Run make tests_run with 2-minute timeout
+                run: make tests_run
+                timeout-minutes: 2
+
+    push_to_mirror:
+        needs: [check_coding_style, check_program_compilation, run_tests]
+        if: github.event_name == 'push'
+        runs-on: ubuntu-latest
+        steps:
+            -   name: Check out repository
+                uses: actions/checkout@v2
+
+            -   name: Set up SSH key
+                run: |
+                    mkdir -p ~/.ssh
+                    echo "${{ secrets.GIT_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+                    chmod 600 ~/.ssh/id_rsa
+                    ssh-keyscan "${{ env.MIRROR_URL }}" >> ~/.ssh/known_hosts
+
+            -   name: Push to mirror repository
+                uses: pixta-dev/repository-mirroring-action@v1
+                with:
+                    target_remote_url: ${{ env.MIRROR_URL }}
+                    ssh_private_key: ${{ secrets.GIT_SSH_PRIVATE_KEY }}
