@@ -38,7 +38,7 @@ jobs:
                     fi
 
     check_program_compilation:
-        #needs: check_coding_style
+        needs: check_coding_style
         runs-on: ubuntu-latest
         container:
             image: epitechcontent/epitest-docker
@@ -61,7 +61,7 @@ jobs:
                     done
 
     run_tests:
-        #needs: [check_coding_style, check_program_compilation]
+        needs: [check_coding_style, check_program_compilation]
         runs-on: ubuntu-latest
         container:
             image: epitechcontent/epitest-docker
@@ -74,7 +74,7 @@ jobs:
                 timeout-minutes: 2
 
     push_to_mirror:
-        #needs: [check_coding_style, check_program_compilation, run_tests]
+        needs: [check_coding_style, check_program_compilation, run_tests]
         if: github.event_name == 'push'
         runs-on: ubuntu-latest
         -   uses: actions/checkout@v3
