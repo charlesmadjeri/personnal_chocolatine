@@ -9,8 +9,6 @@ on:
         branches-ignore:
             -   'ga-ignore-*'
 
-# Set the variables for the epitech repository acting like a mirror
-# and list the executables relative filepaths with filenames you need :
 env:
 
     MIRROR_URL: 'git@github.com:charlesmadjeri/epitech_chocolatine.git'
